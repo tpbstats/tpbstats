@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>tpbstats</title>
+</head>
+<style>
+
+body {
+	font-family: monospace;
+	font-size: 1.25em;
+}
+table, th, td {
+	border: 1px solid black;
+	border-collapse: collapse;
+}
+th, td {
+	text-align: left;
+	padding: 0.5em;
+}
+
+</style>
+<body>
+<h1>TPBSTATS</h1>
+<p>The most popular movies on The Pirate Bay during the last 24 hours.</p>
+<script>
+
+// Data
+
+var json = {{.json}};
+console.log(json);
+
+// Functions for drawing tables
+
+function getCell(type, value) {
+	var cell = document.createElement(type);
+	cell.appendChild(document.createTextNode(value));
+	return cell;
+}
+
+function getRow(type, array) {
+	var row = document.createElement('tr');
+	for (var i = 0; i < array.length; i++)
+		row.appendChild(getCell(type, array[i]));
+	return row;
+}
+
+function drawTable(json) {
+	var table = document.createElement('table');
+	var display = {
+		"title": "Title",
+		"leechers": "Leechers",
+		"seeders": "Seeders",
+		"peers": "Peers",
+		"imdb_rating": "IMDB",
+		"tomato_meter": "RT"
+	};
+	var functions = {
+		"title": null,
+		"leechers": null,
+		"seeders": null,
+		"peers": null,
+		"imdb_rating": function (x) {return x/10},
+		"tomato_meter": null
+	}
+	var columns = [];
+	for (var key in display) columns.push(display[key]);
+	table.appendChild(getRow("th", columns));
+	json.forEach(function(object) {
+		var row = [];
+		for (var key in display) {
+			if (functions[key])
+				row.push(functions[key](object[key]));
+			else
+				row.push(object[key]);
+		}
+		table.appendChild(getRow("td", row));
+	});
+	document.body.appendChild(table);
+}
+
+// Draw table
+
+drawTable(json);
+
+</script>
+</body>
+</html>
