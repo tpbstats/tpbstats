@@ -2,6 +2,9 @@
 <html>
 <head>
 	<title>tpbstats</title>
+	<meta charset="UTF-8">
+	<meta name="description" content="The most popular movies on The Pirate Bay during the last 24 hours.">
+	<meta name="keywords" content="The Pirate Bay, statistics, popular, movies, tpbstats">
 </head>
 <style>
 
@@ -20,20 +23,37 @@ th, td {
 
 </style>
 <body>
-<h1>TPBSTATS</h1>
-<p>The most popular movies on The Pirate Bay during the last 24 hours.</p>
+<header>
+	<h1>tpbstats</h1>
+	<p>The most popular movies on The Pirate Bay during the last 24 hours.</p>
+</header>
+<main></main>
+<footer>
+	<p>Made with data from <a href="http://thepiratebay.se" title="The Pirate Bay">The Pirate Bay</a> and <a href="http://jpatterson.me/the-pirate-beacon/" title="The Pirate Beacon">The Pirate Beacon</a>.</p>
+	<p>Powered by <a href="https://github.com/tpbstats" title="tpbstats on Github">GitHub</a>.</p>
+</footer>
 <script>
 
 // Data
 
-var json = {{.json}};
-console.log(json);
+var topMovie = {{.topMovie}};
+var time = {{.time}};
+
+// References
+
+var header = document.getElementsByTagName('header')[0];
+var main = document.getElementsByTagName('main')[0];
+var footer = document.getElementsByTagName('footer')[0];
 
 // Functions for drawing tables
 
 function getCell(type, value) {
 	var cell = document.createElement(type);
-	cell.appendChild(document.createTextNode(value));
+	// if (typeof value == 'string' || value instanceof String)
+	// 	cell.appendChild(document.createTextNode(value));
+	// else
+	// 	cell.appendChild(value);
+	cell.innerHTML = value;
 	return cell;
 }
 
@@ -44,43 +64,52 @@ function getRow(type, array) {
 	return row;
 }
 
-function drawTable(json) {
+function getTable(objects) {
 	var table = document.createElement('table');
-	var display = {
-		"title": "Title",
-		"leechers": "Leechers",
-		"seeders": "Seeders",
-		"peers": "Peers",
-		"imdb_rating": "IMDB",
-		"tomato_meter": "RT"
-	};
-	var functions = {
-		"title": null,
-		"leechers": null,
-		"seeders": null,
-		"peers": null,
-		"imdb_rating": function (x) {return x/10},
-		"tomato_meter": null
-	}
-	var columns = [];
-	for (var key in display) columns.push(display[key]);
-	table.appendChild(getRow("th", columns));
-	json.forEach(function(object) {
+	var columns = [
+		'#',
+		'Title',
+		'Seeders',
+		'Leechers',
+		'Peers',
+		'IMDB',
+		'RT'
+	];
+	table.appendChild(getRow('th', columns));
+	for (var i = 0; i < objects.length; i++) {
+		var object = objects[i];
 		var row = [];
-		for (var key in display) {
-			if (functions[key])
-				row.push(functions[key](object[key]));
-			else
-				row.push(object[key]);
-		}
-		table.appendChild(getRow("td", row));
-	});
-	document.body.appendChild(table);
+		row.push(i + 1);
+		var title = object['title'];
+		var url = 'http://www.imdb.com/title/tt' + object['id'];
+		row.push('<a href="' + url + '" title="' + title + '">' + title + '</a>');
+		row.push(object['seeders']);
+		row.push(object['leechers']);
+		row.push(object['peers']);
+		row.push(object['imdb_rating'] / 10);
+		row.push(object['tomato_meter']);
+		table.appendChild(getRow('td', row));
+	}
+	return table;
 }
 
 // Draw table
 
-drawTable(json);
+main.appendChild(getTable(topMovie));
+
+// Display time since update
+
+var date = new Date(time);
+var timeDisplay = document.createElement('p');
+function timeUpdate() {
+	var ms = new Date().getTime() - date.getTime();
+	var minutes = Math.round(ms / 1000 / 60);
+	var text = 'Updated ' + minutes + ' minutes ago.';
+	timeDisplay.textContent = text;
+}
+timeUpdate();
+setInterval(timeUpdate, 60 * 1000);
+footer.insertBefore(timeDisplay, footer.firstChild);
 
 </script>
 </body>

@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"log"
+	"time"
 	"io/ioutil"
 	"database/sql"
 	"encoding/json"
@@ -54,7 +55,8 @@ func generate() {
 	defer w.Close()
 	rows, _ := db.Query("SELECT * FROM topMovie")
 	data := map[string]interface{} {
-		"json": rowsToJson(rows),
+		"topMovie": rowsToJson(rows),
+		"time": time.Now().UTC(),
 	}
 	path = fmt.Sprintf("%s/templates/index.html", dirTemplates)
 	t, err := template.ParseFiles(path)
