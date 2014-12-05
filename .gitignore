@@ -1,5 +1,8 @@
-# build
+# Build
 tpbstats
 
 # Mac shit
 .DS_Store
+
+# Configuration
+*.sh
