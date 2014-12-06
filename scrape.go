@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"net/http"
+	"io/ioutil"
 	"encoding/json"
 	"database/sql"
 	"github.com/PuerkitoBio/goquery"
@@ -83,54 +85,76 @@ func scrapeTorrent(id int) {
 	var exists bool
 	stmts["movieExists"].QueryRow(imdb).Scan(&exists)
 	if !exists {
-		if !scrapeMovie(imdb) {
-			stmts["movieInsert"].Exec(id, nil, nil, nil, nil, nil, nil, nil, nil, scrapeid)
+		movie, err := scrapeMovie(imdb)
+		if (err != nil) {
+			log.Println(err)
+			stmts["movieInsert"].Exec(id, nil, nil, nil, nil, nil, nil, nil, nil, nil, scrapeid)
+		} else {
+			stmts["movieInsert"].Exec(
+				id,
+				movie["title"],
+				movie["released"],
+				movie["imdb_rating"],
+				movie["imdb_votes"],
+				movie["tomato_meter"],
+				movie["tomato_reviews"],
+				movie["tomato_user_meter"],
+				movie["tomato_user_reviews"],
+				movie["trailer"],
+				scrapeid)
 		}
 	}
 
 	stmts["torrentInsert"].Exec(id, name, uploaded, size, imdb, scrapeid)
 }
 
-func interToInt(inter interface{}) int {
-	str := inter.(string);
-	rex := regexp.MustCompile("[^0-9]")
-	str = rex.ReplaceAllString(str, "")
-	number, _ := strconv.Atoi(str)
-	return number;
-}
-
-func scrapeMovie(id int) bool {
+func scrapeMovie(id int) (map[string]interface{}, error) {
 
 	url := fmt.Sprintf("http://api.jpatterson.me/beacon/movie/tt%07d", id)
-	document, err := goquery.NewDocument(url)
+	resp, err := http.Get(url)
 	if err != nil {
 		log.Println("Problem connecting to beacon API")
-		return false
+		return nil, fmt.Errorf("Problem connecting to beacon API")
 	}
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
 
-	bytes := []byte(document.Text())
 	var data map[string]map[string]interface{}
-	err = json.Unmarshal(bytes, &data)
+	err = json.Unmarshal(body, &data)
 	movie := data["movie"]
-
 	if err != nil || !movie["found"].(bool) {
 		log.Printf("IMDB id %d not found on beacon API", id)
-		return false
+		return nil, fmt.Errorf("IMDB id %d not found on beacon API", id)
 	}
 	
-	stmts["movieInsert"].Exec(
-		id,
-		movie["title"],
-		movie["released"],
-		interToInt(movie["imdb_rating"]),
-		interToInt(movie["imdb_votes"]),
-		interToInt(movie["tomato_meter"]),
-		interToInt(movie["tomato_reviews"]),
-		interToInt(movie["tomato_user_meter"]),
-		interToInt(movie["tomato_user_reviews"]),
-		scrapeid)
+	// Convert strings to ints ("5,912" to 5912)
+	keys := []string {
+		"imdb_rating",
+		"imdb_votes",
+		"tomato_meter",
+		"tomato_reviews",
+		"tomato_user_meter",
+		"tomato_user_reviews",
+	}
+	rex := regexp.MustCompile("[^0-9]")
+	for _, key := range keys {
+		str := movie[key].(string);
+		str = rex.ReplaceAllString(str, "")
+		number, _ := strconv.Atoi(str)
+		movie[key] = number;
+	}
 
-	return true
+	// Extract trailer url from annoying iframe wrapper
+	// src="https://www.youtube.com/embed/oNHQw96SxJY"
+	if (movie["trailer"] != nil) {
+		rex = regexp.MustCompile("src=\"([^\"]+)\"")
+		matches := rex.FindStringSubmatch(movie["trailer"].(string))
+		if (matches != nil) {
+			movie["trailer"] = matches[1]
+		}
+	}
+
+	return movie, nil
 }
 
 func scrape() {
@@ -144,13 +168,27 @@ func scrape() {
 	stmts["torrentExists"], _ = db.Prepare("SELECT EXISTS(SELECT 1 FROM torrent WHERE id = $1)")
 	stmts["torrentInsert"], _ = db.Prepare("INSERT INTO torrent VALUES ($1, $2, $3, $4, $5, $6)")
 	stmts["movieExists"], _ = db.Prepare("SELECT EXISTS(SELECT 1 FROM movie WHERE id = $1)")
-	stmts["movieInsert"], _ = db.Prepare("INSERT INTO movie VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)")
+	stmts["movieInsert"], _ = db.Prepare("INSERT INTO movie VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)")
 	stmts["statusInsert"], _ = db.Prepare("INSERT INTO status VALUES ($1, $2, $3, $4)")
+	stmts["movieUpdate"], _ = db.Prepare(`
+		UPDATE tempMovie
+		SET
+			title = $2,
+			released = $3,
+			imdb_rating = $4,
+			imdb_votes = $5,
+			tomato_meter = $6,
+			tomato_reviews = $7,
+			tomato_user_meter = $8,
+			tomato_user_reviews = $9,
+			trailer = $10,
+			scrape = $11
+		WHERE id = $1`)
 
 	db.QueryRow("INSERT INTO scrape DEFAULT VALUES RETURNING id").Scan(&scrapeid)
 
+	// Scrape the top torrents of the categories
 	categories := []int {201, 207}
-
 	for _, category := range categories {
 		for i := 0; i < 10; i++ {
 			url := fmt.Sprintf("http://thepiratebay.se/browse/%d/%d/9/", category, i)
@@ -159,13 +197,27 @@ func scrape() {
 		}
 	}
 
-	views := []string {
-		"movieScrape",
-		"top",
-		"topMovie",
-		"topMovieScrape",
-	}
-	for _, view := range views {
-		db.Exec("REFRESH MATERIALIZED VIEW " + view)
+	// Update movies that need updating
+	rows, _ := db.Query("SELECT id FROM movieNeedsUpdate")
+	defer rows.Close()
+	for rows.Next() {
+		var id int;
+		rows.Scan(&id)
+		movie, err := scrapeMovie(id)
+		if (err != nil) {
+			continue
+		}
+		stmts["movieUpdate"].Exec(
+			id,
+			movie["title"],
+			movie["released"],
+			movie["imdb_rating"],
+			movie["imdb_votes"],
+			movie["tomato_meter"],
+			movie["tomato_reviews"],
+			movie["tomato_user_meter"],
+			movie["tomato_user_reviews"],
+			movie["trailer"],
+			scrapeid)
 	}
 }

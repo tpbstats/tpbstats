@@ -49,10 +49,6 @@ var footer = document.getElementsByTagName('footer')[0];
 
 function getCell(type, value) {
 	var cell = document.createElement(type);
-	// if (typeof value == 'string' || value instanceof String)
-	// 	cell.appendChild(document.createTextNode(value));
-	// else
-	// 	cell.appendChild(value);
 	cell.innerHTML = value;
 	return cell;
 }

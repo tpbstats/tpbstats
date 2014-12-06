@@ -16,6 +16,7 @@ CREATE TABLE movie(
 	tomato_reviews int,
 	tomato_user_meter int,
 	tomato_user_reviews int,
+	trailer varchar(100),
 	scrape int not null references scrape(id)
 );
 
@@ -36,7 +37,7 @@ CREATE TABLE status(
 	primary key(torrent, scrape)
 );
 
-CREATE MATERIALIZED VIEW movieScrape AS
+CREATE VIEW movieScrape AS
 SELECT
 	movie.id,
 	status.scrape,
@@ -52,7 +53,7 @@ WHERE
 GROUP BY movie.id, status.scrape
 ORDER BY status.scrape;
 
-CREATE MATERIALIZED VIEW top AS
+CREATE VIEW top AS
 SELECT 
 	id,
 	ROUND(AVG(seeders)) seeders,
@@ -63,13 +64,13 @@ GROUP BY id
 ORDER BY peers DESC
 LIMIT 10;
 
-CREATE MATERIALIZED VIEW topMovie AS
+CREATE VIEW topMovie AS
 SELECT *
 FROM top
 NATURAL JOIN movie
 ORDER BY top.peers DESC;
 
-CREATE MATERIALIZED VIEW topMovieScrape AS
+CREATE VIEW topMovieScrape AS
 SELECT
 	top.id,
 	ms.scrape,
@@ -81,16 +82,9 @@ WHERE
 	top.id = ms.id
 ORDER BY top.peers DESC, ms.scrape ASC;
 
--- CREATE MATERIALIZED VIEW topMovieScrape AS
--- SELECT
--- 	top.id,
--- 	scrape.id scrape,
--- 	scrape.time,
--- 	ms.seeders,
--- 	ms.leechers,
--- 	ms.peers
--- FROM top, movieScrape ms, scrape
--- WHERE
--- 	top.id = ms.id
--- 	AND ms.scrape = scrape.id
--- ORDER BY top.peers DESC, scrape.id ASC;
+CREATE VIEW movieNeedsUpdate AS
+select movie.id
+from movie, scrape
+where
+	movie.scrape = scrape.id
+	AND scrape.time < now() - interval '10 minutes';
