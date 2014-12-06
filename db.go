@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"log"
 	"database/sql"
 	_ "github.com/lib/pq"
 )
@@ -9,11 +10,11 @@ import (
 func getDb() *sql.DB {
 	db, err := sql.Open("postgres", os.Getenv("DATABASE"))
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	return db
 }

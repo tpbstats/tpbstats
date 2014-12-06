@@ -87,4 +87,4 @@ select movie.id
 from movie, scrape
 where
 	movie.scrape = scrape.id
-	AND scrape.time < now() - interval '10 minutes';
+	AND scrape.time < now() - interval '7 days';

@@ -164,27 +164,38 @@ func scrape() {
 	db = getDb()
 	defer db.Close()
 
+	// Prepare query
+	queries := map[string]string {
+		"torrentExists": "SELECT EXISTS(SELECT 1 FROM torrent WHERE id = $1)",
+		"torrentInsert": "INSERT INTO torrent VALUES ($1, $2, $3, $4, $5, $6)",
+		"movieExists": "SELECT EXISTS(SELECT 1 FROM movie WHERE id = $1)",
+		"movieInsert": "INSERT INTO movie VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+		"statusInsert": "INSERT INTO status VALUES ($1, $2, $3, $4)",
+		"movieUpdate": `
+			UPDATE movie
+			SET
+				title = $2,
+				released = $3,
+				imdb_rating = $4,
+				imdb_votes = $5,
+				tomato_meter = $6,
+				tomato_reviews = $7,
+				tomato_user_meter = $8,
+				tomato_user_reviews = $9,
+				trailer = $10,
+				scrape = $11
+			WHERE id = $1`,
+	}
 	stmts = make(map[string]*sql.Stmt)
-	stmts["torrentExists"], _ = db.Prepare("SELECT EXISTS(SELECT 1 FROM torrent WHERE id = $1)")
-	stmts["torrentInsert"], _ = db.Prepare("INSERT INTO torrent VALUES ($1, $2, $3, $4, $5, $6)")
-	stmts["movieExists"], _ = db.Prepare("SELECT EXISTS(SELECT 1 FROM movie WHERE id = $1)")
-	stmts["movieInsert"], _ = db.Prepare("INSERT INTO movie VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)")
-	stmts["statusInsert"], _ = db.Prepare("INSERT INTO status VALUES ($1, $2, $3, $4)")
-	stmts["movieUpdate"], _ = db.Prepare(`
-		UPDATE tempMovie
-		SET
-			title = $2,
-			released = $3,
-			imdb_rating = $4,
-			imdb_votes = $5,
-			tomato_meter = $6,
-			tomato_reviews = $7,
-			tomato_user_meter = $8,
-			tomato_user_reviews = $9,
-			trailer = $10,
-			scrape = $11
-		WHERE id = $1`)
+	var err error
+	for key, query := range queries {
+		stmts[key], err = db.Prepare(query)
+		if (err != nil) {
+			log.Panicf("Error preparing query: %s", query)
+		}
+	}
 
+	// Get scrapeid
 	db.QueryRow("INSERT INTO scrape DEFAULT VALUES RETURNING id").Scan(&scrapeid)
 
 	// Scrape the top torrents of the categories
