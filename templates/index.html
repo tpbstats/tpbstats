@@ -136,7 +136,7 @@ function getTable(objects) {
 		var url = 'http://www.imdb.com/title/tt' + object['id'];
 		row.push('<a href="' + url + '" title="' + title + '">' + title + '</a>');
 		row.push(object['peers']);
-		row.push(((object['delta'] > 0) ? '+' : '-') + Math.abs(object['delta']));
+		row.push(((object['delta'] > 0) ? '+' : '&minus;') + Math.abs(object['delta']));
 		row.push(object['imdb_rating'] ? object['imdb_rating'] / 10 : "&mdash;");
 		row.push(object['tomato_meter'] ? object['tomato_meter'] : "&mdash;");
 		if (object['trailer'] !== null)
