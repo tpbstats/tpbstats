@@ -142,7 +142,7 @@ function getTable(objects) {
 		if (object['trailer'] !== null)
 			row.push('<a href="' + object['trailer'] + '?autoplay=1" title="' + title + ' trailer on YouTube">YouTube</a>');
 		else
-			row.push("&mdash;");
+			row.push('&mdash;');
 		table.appendChild(getRow('td', row));
 	}
 	return table;
@@ -165,7 +165,7 @@ function timeUpdate() {
 		var text = 'Updated ' + minutes + ' minutes ago.';
 	else
 		var text = 'New data available &mdash; please refresh.';
-	timeDisplay.textContent = text;
+	timeDisplay.innerHTML = text;
 }
 timeUpdate();
 interval = setInterval(timeUpdate, 60 * 1000);
