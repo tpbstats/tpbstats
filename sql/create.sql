@@ -53,6 +53,23 @@ WHERE
 GROUP BY movie.id, status.scrape
 ORDER BY status.scrape;
 
+CREATE VIEW movieScrapeYesterday AS
+SELECT
+	movie.id,
+	status.scrape,
+	SUM(seeders) seeders,
+	SUM(leechers) leechers,
+	SUM(seeders + leechers) peers
+FROM movie, torrent, status, scrape
+WHERE
+	torrent.movie = movie.id
+	AND status.torrent = torrent.id
+	AND status.scrape = scrape.id
+	AND scrape.time < now() - interval '24 hours'
+	AND scrape.time > now() - interval '48 hours'
+GROUP BY movie.id, status.scrape
+ORDER BY status.scrape;
+
 CREATE VIEW top AS
 SELECT 
 	id,
@@ -68,6 +85,7 @@ CREATE VIEW topMovie AS
 SELECT *
 FROM top
 NATURAL JOIN movie
+NATURAL JOIN deltaYesterday
 ORDER BY top.peers DESC;
 
 CREATE VIEW topMovieScrape AS
@@ -88,3 +106,45 @@ from movie, scrape
 where
 	movie.scrape = scrape.id
 	AND scrape.time < now() - interval '7 days';
+
+CREATE VIEW deltaYesterday AS
+SELECT
+	ms.id,
+	ROUND(AVG(msy.peers)) yesterday,
+	ROUND(AVG(ms.peers)) peers,
+	ROUND(AVG(ms.peers) - AVG(msy.peers)) delta
+FROM movieScrape ms
+LEFT JOIN movieScrapeYesterday msy ON msy.id = ms.id
+WHERE msy.peers IS NOT NULL
+GROUP BY ms.id;
+
+CREATE VIEW risingMovie AS
+SELECT *
+FROM deltaYesterday
+NATURAL JOIN movie
+ORDER BY delta DESC
+LIMIT 10;
+
+CREATE VIEW fallingMovie AS
+SELECT *
+FROM deltaYesterday
+NATURAL JOIN movie
+ORDER BY delta ASC
+LIMIT 10;
+
+CREATE VIEW new AS
+SELECT
+	ms.id, 
+	ROUND(AVG(ms.peers)) peers
+FROM movieScrape ms
+LEFT JOIN movieScrapeYesterday msy ON msy.id = ms.id
+WHERE msy.id IS NULL
+GROUP BY ms.id
+ORDER BY peers DESC
+LIMIT 10;
+
+CREATE VIEW newMovie AS
+SELECT *
+FROM new
+NATURAL JOIN movie
+ORDER BY peers DESC;

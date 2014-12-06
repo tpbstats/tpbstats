@@ -48,16 +48,30 @@ func generate() {
 	db := getDb()
 	defer db.Close()
 	
+	// Views
+	views := []string {
+		"topMovie",
+		"risingMovie",
+		"fallingMovie",
+	}
+
+	// Results
+	results := make(map[string]template.JS)
+	for _, view := range views {
+		rows, _ := db.Query("SELECT * FROM " + view)
+		defer rows.Close()
+		results[view] = rowsToJson(rows)
+	}
+
 	// Generate index
-	
 	path := fmt.Sprintf("%s/index.html", dirOutput)
 	w, err := os.Create(path)
 	defer w.Close()
-	rows, _ := db.Query("SELECT * FROM topMovie")
-	data := map[string]interface{} {
-		"topMovie": rowsToJson(rows),
-		"time": time.Now().UTC(),
+	data := make(map[string]interface{})
+	for view, json := range results {
+		data[view] = json
 	}
+	data["time"] = time.Now().UTC()
 	path = fmt.Sprintf("%s/templates/index.html", dirTemplates)
 	t, err := template.ParseFiles(path)
 	if (err != nil) {
@@ -65,17 +79,8 @@ func generate() {
 	}
 	t.Execute(w, &data)
 
-	// Generate json
-	views := []string {
-		"movieScrape",
-		"top",
-		"topMovie",
-		"topMovieScrape",
-	}
-	for _, view := range views {
-		rows, _ := db.Query("SELECT * FROM " + view)
-		defer rows.Close()
-		json := rowsToJson(rows)
+	// Save json
+	for view, json := range results {
 		d1 := []byte(json)
 		path := fmt.Sprintf("%s/%s.json", dirOutput, view)
 		err := ioutil.WriteFile(path, d1, 0644)
