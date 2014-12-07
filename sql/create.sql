@@ -7,7 +7,7 @@ CREATE TABLE scrape(
 );
 
 CREATE TABLE movie(
-	id int primary key not null,
+	id int primary key NOT NULL,
 	title varchar(100),
 	released date,
 	imdb_rating int,
@@ -17,23 +17,23 @@ CREATE TABLE movie(
 	tomato_user_meter int,
 	tomato_user_reviews int,
 	trailer varchar(100),
-	scrape int not null references scrape(id)
+	scrape int NOT NULL REFERENCES scrape(id)
 );
 
 CREATE TABLE torrent(
-	id int primary key not null,
-	name varchar(100) not null,
-	uploaded timestamp not null,
-	size bigint not null,
-	movie int references movie(id),
-	scrape int not null references scrape(id)
+	id int primary key NOT NULL,
+	name varchar(100) NOT NULL,
+	uploaded timestamp NOT NULL,
+	size bigint NOT NULL,
+	movie int REFERENCES movie(id),
+	scrape int NOT NULL REFERENCES scrape(id)
 );
 
 CREATE TABLE status(
-	torrent int not null references torrent(id),
-	seeders int not null,
-	leechers int not null,
-	scrape int not null references scrape(id),
+	torrent int NOT NULL REFERENCES torrent(id) ON DELETE CASCADE,
+	seeders int NOT NULL,
+	leechers int NOT NULL,
+	scrape int NOT NULL REFERENCES scrape(id) ON DELETE CASCADE,
 	primary key(torrent, scrape)
 );
 
