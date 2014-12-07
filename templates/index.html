@@ -33,17 +33,26 @@ table {
 	margin: 0 auto;
 }
 table, th, td {
-	border: 1px solid black;
 	border-collapse: collapse;
 	border-spacing: 0;
+	border: 0;
 }
 th, td {
 	text-align: left;
-	padding: 0.5em;
+	padding: 0.75em;
 	max-width: 15em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+table {
+	border: 1px solid black;
+}
+th {
+	border-bottom: 1px solid black;
+}
+td {
+	border-bottom: 1px dotted black;
 }
 th:first-child {
 	width: 1.5em;
@@ -137,8 +146,8 @@ function getTable(objects) {
 		row.push('<a href="' + url + '" title="' + title + '">' + title + '</a>');
 		row.push(object['peers']);
 		row.push(((object['delta'] > 0) ? '+' : '&minus;') + Math.abs(object['delta']));
-		row.push(object['imdb_rating'] ? object['imdb_rating'] / 10 : "&mdash;");
-		row.push(object['tomato_meter'] ? object['tomato_meter'] : "&mdash;");
+		row.push(object['imdb_rating'] ? (object['imdb_rating'] / 10).toPrecision(2) : "&mdash;");
+		row.push(object['tomato_meter'] ? object['tomato_meter'] + "%" : "&mdash;");
 		if (object['trailer'] !== null)
 			row.push('<a href="' + object['trailer'] + '?autoplay=1" title="' + title + ' trailer on YouTube">YouTube</a>');
 		else
