@@ -100,12 +100,21 @@ WHERE
 	top.id = ms.id
 ORDER BY top.peers DESC, ms.scrape ASC;
 
+CREATE VIEW movieLastScrape AS
+SELECT DISTINCT(torrent.movie) id
+FROM status, torrent
+WHERE
+	status.torrent = torrent.id
+	AND status.scrape = (SELECT last_value FROM scrape_id_seq);
+
 CREATE VIEW movieNeedsUpdate AS
-select movie.id
-from movie, scrape
-where
+SELECT movie.id
+FROM movie, scrape, movieLastScrape mls
+WHERE
 	movie.scrape = scrape.id
-	AND scrape.time < now() - interval '7 days';
+	AND movie.id = mls.id
+	AND scrape.time < now() - interval '7 days'
+LIMIT 10;
 
 CREATE VIEW deltaYesterday AS
 SELECT
