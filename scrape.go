@@ -19,6 +19,7 @@ var scrapeid int
 
 func scrapePage(url string) bool {
 
+	log.Printf("Scraping page %s", url)
 	document, err := goquery.NewDocument(url)
 	if err != nil {
 		log.Println("Problem connecting to The Pirate Bay")
@@ -61,6 +62,7 @@ func matchToInt(expression string, haystack string) (number int) {
 
 func scrapeTorrent(id int) {
 
+	log.Printf("Scraping torrent %d", id)
 	url := fmt.Sprintf("http://thepiratebay.se/torrent/%d/", id)
 	document, _ := goquery.NewDocument(url)
 	html, _ := document.Html()
@@ -110,6 +112,7 @@ func scrapeTorrent(id int) {
 
 func scrapeMovie(id int) (map[string]interface{}, error) {
 
+	log.Printf("Scraping movie %07d", id)
 	url := fmt.Sprintf("http://api.jpatterson.me/beacon/movie/tt%07d", id)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -203,7 +206,6 @@ func scrape() {
 	for _, category := range categories {
 		for i := 0; i < 10; i++ {
 			url := fmt.Sprintf("http://thepiratebay.se/browse/%d/%d/9/", category, i)
-			log.Println(url)
 			scrapePage(url)
 		}
 	}
