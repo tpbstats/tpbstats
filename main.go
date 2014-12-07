@@ -10,11 +10,11 @@ func main() {
 	flag.Parse()
 
 	switch action {
-		case "generate":
-			generate()
-		case "scrape":
-			scrape()
-		default:
-			panic("Invalid action")
+	case "generate":
+		generate()
+	case "scrape":
+		scrape()
+	default:
+		panic("Invalid action")
 	}
 }

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"os"
-	"log"
 	"database/sql"
 	_ "github.com/lib/pq"
+	"log"
+	"os"
 )
 
 func getDb() *sql.DB {

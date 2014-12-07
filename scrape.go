@@ -1,16 +1,16 @@
 package main
 
 import (
+	"database/sql"
+	"encoding/json"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
-	"net/http"
-	"io/ioutil"
-	"encoding/json"
-	"database/sql"
-	"github.com/PuerkitoBio/goquery"
 )
 
 var db *sql.DB
@@ -46,7 +46,7 @@ func scrapePage(url string) bool {
 
 		// Save status to database
 		stmts["statusInsert"].Exec(id, seeders, leechers, scrapeid)
-	});
+	})
 
 	return true
 }
@@ -54,7 +54,7 @@ func scrapePage(url string) bool {
 func matchToInt(expression string, haystack string) (number int) {
 	rex := regexp.MustCompile(expression)
 	matches := rex.FindStringSubmatch(haystack)
-	if (matches != nil) {
+	if matches != nil {
 		number, _ = strconv.Atoi(matches[1])
 	}
 	return number
@@ -88,7 +88,7 @@ func scrapeTorrent(id int) {
 	stmts["movieExists"].QueryRow(imdb).Scan(&exists)
 	if !exists {
 		movie, err := scrapeMovie(imdb)
-		if (err != nil) {
+		if err != nil {
 			log.Println(err)
 			stmts["movieInsert"].Exec(id, nil, nil, nil, nil, nil, nil, nil, nil, nil, scrapeid)
 		} else {
@@ -129,9 +129,9 @@ func scrapeMovie(id int) (map[string]interface{}, error) {
 		log.Printf("IMDB id %d not found on beacon API", id)
 		return nil, fmt.Errorf("IMDB id %d not found on beacon API", id)
 	}
-	
+
 	// Convert strings to ints ("5,912" to 5912)
-	keys := []string {
+	keys := []string{
 		"imdb_rating",
 		"imdb_votes",
 		"tomato_meter",
@@ -141,18 +141,18 @@ func scrapeMovie(id int) (map[string]interface{}, error) {
 	}
 	rex := regexp.MustCompile(`[^0-9]`)
 	for _, key := range keys {
-		str := movie[key].(string);
+		str := movie[key].(string)
 		str = rex.ReplaceAllString(str, "")
 		number, _ := strconv.Atoi(str)
-		movie[key] = number;
+		movie[key] = number
 	}
 
 	// Extract trailer url from annoying iframe wrapper
 	// src="https://www.youtube.com/embed/oNHQw96SxJY"
-	if (movie["trailer"] != nil) {
+	if movie["trailer"] != nil {
 		rex = regexp.MustCompile(`src="([^"]+)"`)
 		matches := rex.FindStringSubmatch(movie["trailer"].(string))
-		if (matches != nil) {
+		if matches != nil {
 			movie["trailer"] = matches[1]
 		}
 	}
@@ -168,12 +168,12 @@ func scrape() {
 	defer db.Close()
 
 	// Prepare query
-	queries := map[string]string {
+	queries := map[string]string{
 		"torrentExists": "SELECT EXISTS(SELECT 1 FROM torrent WHERE id = $1)",
 		"torrentInsert": "INSERT INTO torrent VALUES ($1, $2, $3, $4, $5, $6)",
-		"movieExists": "SELECT EXISTS(SELECT 1 FROM movie WHERE id = $1)",
-		"movieInsert": "INSERT INTO movie VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
-		"statusInsert": "INSERT INTO status VALUES ($1, $2, $3, $4)",
+		"movieExists":   "SELECT EXISTS(SELECT 1 FROM movie WHERE id = $1)",
+		"movieInsert":   "INSERT INTO movie VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+		"statusInsert":  "INSERT INTO status VALUES ($1, $2, $3, $4)",
 		"movieUpdate": `
 			UPDATE movie
 			SET
@@ -193,7 +193,7 @@ func scrape() {
 	var err error
 	for key, query := range queries {
 		stmts[key], err = db.Prepare(query)
-		if (err != nil) {
+		if err != nil {
 			log.Panicf("Error preparing query: %s", query)
 		}
 	}
@@ -202,7 +202,7 @@ func scrape() {
 	db.QueryRow("INSERT INTO scrape DEFAULT VALUES RETURNING id").Scan(&scrapeid)
 
 	// Scrape the top torrents of the categories
-	categories := []int {201, 207}
+	categories := []int{201, 207}
 	for _, category := range categories {
 		for i := 0; i < 10; i++ {
 			url := fmt.Sprintf("http://thepiratebay.se/browse/%d/%d/9/", category, i)
@@ -214,10 +214,10 @@ func scrape() {
 	rows, _ := db.Query("SELECT id FROM movieNeedsUpdate")
 	defer rows.Close()
 	for rows.Next() {
-		var id int;
+		var id int
 		rows.Scan(&id)
 		movie, err := scrapeMovie(id)
-		if (err != nil) {
+		if err != nil {
 			continue
 		}
 		stmts["movieUpdate"].Exec(

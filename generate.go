@@ -1,15 +1,15 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"log"
-	"time"
-	"io/ioutil"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"html/template"
+	"io/ioutil"
+	"log"
+	"os"
 	"path/filepath"
+	"time"
 )
 
 func rowsToMap(rows *sql.Rows) []map[string]interface{} {
@@ -47,9 +47,9 @@ func generate() {
 	dirOutput, _ := filepath.Abs(os.Getenv("OUTPUTDIR"))
 	db := getDb()
 	defer db.Close()
-	
+
 	// Views
-	views := []string {
+	views := []string{
 		"topMovie",
 		"risingMovie",
 		"fallingMovie",
@@ -74,8 +74,8 @@ func generate() {
 	data["time"] = time.Now().UTC()
 	path = fmt.Sprintf("%s/templates/index.html", dirTemplates)
 	t, err := template.ParseFiles(path)
-	if (err != nil) {
-		fmt.Println(err);
+	if err != nil {
+		fmt.Println(err)
 	}
 	t.Execute(w, &data)
 
@@ -84,7 +84,7 @@ func generate() {
 		d1 := []byte(json)
 		path := fmt.Sprintf("%s/%s.json", dirOutput, view)
 		err := ioutil.WriteFile(path, d1, 0644)
-		if (err != nil) {
+		if err != nil {
 			log.Println(err)
 		} else {
 			log.Println(path)
