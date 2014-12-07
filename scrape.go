@@ -28,12 +28,12 @@ func scrapePage(url string) bool {
 	rows := document.Find("tr:not(:last-child)")
 
 	// /torrent/11316236/Into_the_Storm_(2014)_1080p_BrRip_x264_-_YIFY
-	rexId := regexp.MustCompile("^/torrent/(\\d*)/")
+	rex := regexp.MustCompile(`^/torrent/(\d*)/`)
 
 	rows.Each(func(i int, row *goquery.Selection) {
 
 		idRaw, _ := row.Find(".detLink").Attr("href")
-		id, _ := strconv.Atoi(rexId.FindStringSubmatch(idRaw)[1])
+		id, _ := strconv.Atoi(rex.FindStringSubmatch(idRaw)[1])
 		seeders, _ := strconv.Atoi(row.Find("td:nth-child(3)").Text())
 		leechers, _ := strconv.Atoi(row.Find("td:nth-child(4)").Text())
 
@@ -74,9 +74,9 @@ func scrapeTorrent(id int) {
 	uploaded := strings.TrimSpace(uploadedRaw)
 	// <dt>Size:</dt> <dd>305.37 MiB (320207763 Bytes)</dd>
 	sizeRaw := document.Find("dt:contains('Size:') + dd").Text()
-	size := matchToInt("\\((\\d+).Bytes\\)", sizeRaw)
+	size := matchToInt(`\((\d+).Bytes\)`, sizeRaw)
 	// http://www.imdb.com/title/tt1840309/
-	imdb := matchToInt("imdb.com/title/tt(\\d+)/", html)
+	imdb := matchToInt(`imdb.com/title/tt(\d+)/`, html)
 
 	if imdb == 0 {
 		stmts["torrentInsert"].Exec(id, name, uploaded, size, nil, scrapeid)
@@ -139,7 +139,7 @@ func scrapeMovie(id int) (map[string]interface{}, error) {
 		"tomato_user_meter",
 		"tomato_user_reviews",
 	}
-	rex := regexp.MustCompile("[^0-9]")
+	rex := regexp.MustCompile(`[^0-9]`)
 	for _, key := range keys {
 		str := movie[key].(string);
 		str = rex.ReplaceAllString(str, "")
@@ -150,7 +150,7 @@ func scrapeMovie(id int) (map[string]interface{}, error) {
 	// Extract trailer url from annoying iframe wrapper
 	// src="https://www.youtube.com/embed/oNHQw96SxJY"
 	if (movie["trailer"] != nil) {
-		rex = regexp.MustCompile("src=\"([^\"]+)\"")
+		rex = regexp.MustCompile(`src="([^"]+)"`)
 		matches := rex.FindStringSubmatch(movie["trailer"].(string))
 		if (matches != nil) {
 			movie["trailer"] = matches[1]
