@@ -30,10 +30,10 @@ CREATE TABLE torrent(
 );
 
 CREATE TABLE status(
-	torrent int NOT NULL REFERENCES torrent(id) ON DELETE CASCADE,
+	torrent int NOT NULL REFERENCES torrent(id),
 	seeders int NOT NULL,
 	leechers int NOT NULL,
-	scrape int NOT NULL REFERENCES scrape(id) ON DELETE CASCADE,
+	scrape int NOT NULL REFERENCES scrape(id),
 	primary key(torrent, scrape)
 );
 
