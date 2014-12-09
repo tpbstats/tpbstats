@@ -19,6 +19,7 @@ import (
 var db *sql.DB
 var stmts map[string]*sql.Stmt
 var scrapeid int
+var base string
 
 func scrapePage(url string) bool {
 
@@ -26,7 +27,7 @@ func scrapePage(url string) bool {
 	document, err := goquery.NewDocument(url)
 	if err != nil {
 		log.Println("Problem connecting to The Pirate Bay")
-		return false
+		os.Exit(1)
 	}
 	rows := document.Find("tr:not(:last-child)")
 
@@ -66,7 +67,7 @@ func matchToInt(expression string, haystack string) (number int) {
 func scrapeTorrent(id int) {
 
 	log.Printf("Scraping torrent %d", id)
-	url := fmt.Sprintf("http://thepiratebay.se/torrent/%d/", id)
+	url := fmt.Sprintf("%s/torrent/%d/", base, id)
 	document, _ := goquery.NewDocument(url)
 	html, _ := document.Html()
 
@@ -228,7 +229,6 @@ func scrape() {
 		"http://thepiratebay.ac",
 		"http://thepiratebay.cr",
 	}
-	var base string
 	connection := false
 	start := time.Now()
 	for {
