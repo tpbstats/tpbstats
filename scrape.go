@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+	"net"
 )
 
 var db *sql.DB
@@ -160,6 +163,24 @@ func scrapeMovie(id int) (map[string]interface{}, error) {
 	return movie, nil
 }
 
+func dialTimeout(network, addr string) (net.Conn, error) {
+    return net.DialTimeout(network, addr, 2 * time.Second)
+}
+
+func ping(url string) bool {
+	transport := http.Transport{
+	    Dial: dialTimeout,
+	}
+	client := http.Client{
+	    Transport: &transport,
+	}
+	resp, err := client.Get(url)
+	if err != nil || resp.StatusCode != 200 {
+		return false
+	}
+	return true
+}
+
 func scrape() {
 
 	log.Println("Starting scrape...")
@@ -201,11 +222,40 @@ func scrape() {
 	// Get scrapeid
 	db.QueryRow("INSERT INTO scrape DEFAULT VALUES RETURNING id").Scan(&scrapeid)
 
+	// Choose TPB base url that is up
+	urls := []string{
+		"http://thepiratebay.se",
+		"http://thepiratebay.ac",
+		"http://thepiratebay.cr",
+	}
+	var base string
+	connection := false
+	start := time.Now()
+	for {
+		for _, url := range urls {
+			log.Printf("Pinging %s", url)
+			if ping(url) {
+				base = url
+				connection = true
+				break
+			}
+			log.Println("Ping failed")
+		}
+		if connection || time.Since(start).Minutes() > 10 {
+			break
+		}
+	}
+	if !connection {
+		log.Println("Was not able to establish connection, exiting")
+		os.Exit(1)
+	}
+	log.Printf("%s chosen as base", base)
+
 	// Scrape the top torrents of the categories
 	categories := []int{201, 207}
 	for _, category := range categories {
 		for i := 0; i < 10; i++ {
-			url := fmt.Sprintf("http://thepiratebay.se/browse/%d/%d/9/", category, i)
+			url := fmt.Sprintf("%s/browse/%d/%d/9/", base, category, i)
 			scrapePage(url)
 		}
 	}
